@@ -4,8 +4,11 @@ using UnityEngine.UI;
 
 public class UIButtonPressFeedback : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
 {
+    [Header("References")]
     [SerializeField]
     private Image targetImage;
+
+    [Header("Settings")]
     [SerializeField]
     private Color normalColor = Color.white;
     [SerializeField]
@@ -17,13 +20,9 @@ public class UIButtonPressFeedback : MonoBehaviour, IPointerDownHandler, IPointe
 
     private void Awake()
     {
+        Debug.Assert(targetImage != null);
+
         originalScale = transform.localScale;
-
-        if (targetImage == null)
-        {
-            targetImage = GetComponent<Image>();
-        }
-
         targetImage.color = normalColor;
     }
 

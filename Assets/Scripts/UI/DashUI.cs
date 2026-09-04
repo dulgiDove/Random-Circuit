@@ -24,6 +24,14 @@ public class DashUI : MonoBehaviour
     private bool dashDisabled;
     private Coroutine glowCoroutine;
 
+    private void Awake()
+    {
+        Debug.Assert(cooldownFill != null);
+        Debug.Assert(readyGlowImage != null);
+
+        SetReadyGlowAlpha(0f);
+    }
+
     private void OnEnable()
     {
         if (playerMovement != null)
@@ -39,33 +47,34 @@ public class DashUI : MonoBehaviour
             playerMovement.MovementModeChanged -= OnMovementModeChanged;
         }
     }
-    
-    private void Start()
-    {
-        SetReadyGlowAlpha(0f);
-
-        if (playerMovement == null)
-        {
-            return;
-        }
-
-        previousProgress = playerMovement.DashCooldownProgress;
-        UpdateDashMode(playerMovement.MovementMode);
-    }
 
     private void Update()
     {
         if (playerMovement == null)
-        {
             return;
-        }
 
         UpdateCooldown();
     }
 
-    // =========================
-    // Dash Mode
-    // =========================
+    public void Bind(PlayerMovement movement)
+    {
+        if (playerMovement != null)
+        {
+            playerMovement.MovementModeChanged -= OnMovementModeChanged;
+        }
+
+        playerMovement = movement;
+
+        if (playerMovement == null)
+            return;
+
+        playerMovement.MovementModeChanged += OnMovementModeChanged;
+
+        previousProgress = playerMovement.DashCooldownProgress;
+        UpdateDashMode(playerMovement.MovementMode);
+
+        cooldownFill.fillAmount = previousProgress;
+    }
 
     private void OnMovementModeChanged(PlayerMovementMode mode)
     {
@@ -76,10 +85,7 @@ public class DashUI : MonoBehaviour
     {
         dashDisabled = mode == PlayerMovementMode.JumpKing || mode == PlayerMovementMode.Dropper;
 
-        if (cooldownFill != null)
-        {
-            cooldownFill.gameObject.SetActive(!dashDisabled);
-        }
+        cooldownFill.gameObject.SetActive(!dashDisabled);
 
         if (dashDisabled)
         {
@@ -87,18 +93,11 @@ public class DashUI : MonoBehaviour
         }
     }
 
-    // =========================
-    // Cooldown
-    // =========================
-
     private void UpdateCooldown()
     {
         float progress = playerMovement.DashCooldownProgress;
 
-        if (cooldownFill != null)
-        {
-            cooldownFill.fillAmount = progress;
-        }
+        cooldownFill.fillAmount = progress;
 
         if (!dashDisabled && previousProgress < 1f && progress >= 1f)
         {
@@ -108,17 +107,8 @@ public class DashUI : MonoBehaviour
         previousProgress = progress;
     }
 
-    // =========================
-    // Ready Glow
-    // =========================
-
     private void PlayReadyEffect()
     {
-        if (readyGlowImage == null)
-        {
-            return;
-        }
-
         if (glowCoroutine != null)
         {
             StopCoroutine(glowCoroutine);
@@ -136,11 +126,7 @@ public class DashUI : MonoBehaviour
         }
 
         SetReadyGlowAlpha(0f);
-
-        if (readyGlowImage != null)
-        {
-            readyGlowImage.rectTransform.localScale = Vector3.one;
-        }
+        readyGlowImage.rectTransform.localScale = Vector3.one;
     }
 
     private IEnumerator ReadyGlowRoutine()
@@ -152,8 +138,10 @@ public class DashUI : MonoBehaviour
         while (time < glowDuration)
         {
             time += Time.deltaTime;
+
             float t = Mathf.Clamp01(time / glowDuration);
             float scale = Mathf.Lerp(glowStartScale, glowEndScale, t);
+            
             readyGlowImage.rectTransform.localScale = Vector3.one *scale;
             SetReadyGlowAlpha(1f - t);
             yield return null;
@@ -166,11 +154,6 @@ public class DashUI : MonoBehaviour
 
     private void SetReadyGlowAlpha(float alpha)
     {
-        if (readyGlowImage == null)
-        {
-            return;
-        }
-
         Color color =readyGlowImage.color;
         color.a = alpha;
         readyGlowImage.color = color;

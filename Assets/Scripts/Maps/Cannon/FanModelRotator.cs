@@ -1,3 +1,4 @@
+using Unity.Netcode;
 using UnityEngine;
 
 public class FanModelRotator : MonoBehaviour
@@ -8,8 +9,27 @@ public class FanModelRotator : MonoBehaviour
     [SerializeField]
     private float rotationSpeed = 360f;
 
+    private MapActivity mapActivity;
+    private Quaternion baseRotation;
+
+    private void Awake()
+    {
+        mapActivity = GetComponentInParent<MapActivity>();
+        Debug.Assert(mapActivity != null);
+
+        baseRotation = transform.localRotation;
+    }
+
     private void Update()
     {
-        transform.Rotate(rotationAxis, rotationSpeed * Time.deltaTime, Space.Self);
+        if (!mapActivity.IsActive)
+            return;
+
+        double serverTime = NetworkManager.Singleton.ServerTime.Time;
+        double elapsed = serverTime - mapActivity.ActivatedServerTime;
+
+        float angle = Mathf.Repeat((float)(elapsed * rotationSpeed), 360f);
+
+        transform.localRotation = baseRotation * Quaternion.AngleAxis(angle, rotationAxis.normalized);
     }
 }

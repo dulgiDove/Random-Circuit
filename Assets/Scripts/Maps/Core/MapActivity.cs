@@ -3,33 +3,52 @@ using UnityEngine;
 
 public class MapActivity : MonoBehaviour
 {
-    private int activePlayerCount;
-    public int ActivePlayerCount => activePlayerCount;
+    private MapManager mapManager;
+    private int mapIndex = -1;
 
-    public bool IsActive => activePlayerCount > 0;
+    private bool isActive;
+    private double activatedServerTime = -1d;
+
+    public bool IsActive => isActive;
+    public double ActivatedServerTime => activatedServerTime;
 
     public event Action<bool> ActivityChanged;
 
-    public void EnterPlayer()
-    {
-        bool wasActive = IsActive;
-        activePlayerCount++;
+    public MapManager Manager => mapManager;
+    public int MapIndex => mapIndex;
 
-        if (wasActive != IsActive)
-        {
-            ActivityChanged?.Invoke(IsActive);
-        }
+    public void Initialize(MapManager manager, int index)
+    {
+        mapManager = manager;
+        mapIndex = index;
     }
 
-    public void ExitPlayer()
+    public void RequestEnter()
     {
-        bool wasActive = IsActive;
+        if (mapManager == null || mapIndex < 0)
+            return;
 
-        activePlayerCount = Mathf.Max(activePlayerCount - 1, 0);
+        mapManager.RequestMapActivityChange(mapIndex, true);
+    }
 
-        if (wasActive != IsActive)
+    public void RequestExit()
+    {
+        if (mapManager == null || mapIndex < 0)
+            return;
+
+        mapManager.RequestMapActivityChange(mapIndex, false);
+    }
+
+    internal void ApplyNetworkState(bool active, double serverActivationTime)
+    {
+        bool wasActive = isActive;
+
+        isActive = active;
+        activatedServerTime = serverActivationTime;
+
+        if (wasActive != isActive)
         {
-            ActivityChanged?.Invoke(IsActive);
+            ActivityChanged?.Invoke(isActive);
         }
     }
 }

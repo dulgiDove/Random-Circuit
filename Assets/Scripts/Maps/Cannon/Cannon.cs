@@ -1,3 +1,4 @@
+using Unity.Netcode;
 using UnityEngine;
 
 public class Cannon : Interactable
@@ -31,6 +32,16 @@ public class Cannon : Interactable
     [SerializeField]
     private float maxLaunchSpeed = 30f;
 
+    [Header("Network")]
+    [SerializeField]
+    private int networkId;
+
+    private MapActivity mapActivity;
+    private bool waitingAtStop;
+
+    public int NetworkId => networkId;
+    public override bool RequiresServerApproval => true;
+
 
     private Quaternion baseRotation;
 
@@ -54,6 +65,14 @@ public class Cannon : Interactable
         }
     }
 
+    private void Awake()
+    {
+        Debug.Assert(barrelPivot != null);
+        Debug.Assert(launchPoint != null);
+
+        mapActivity = GetComponentInParent<MapActivity>();
+        Debug.Assert(mapActivity != null);
+    }
 
     private void Start()
     {
@@ -69,9 +88,7 @@ public class Cannon : Interactable
     private void Update()
     {
         if (state == CannonState.Idle)
-        {
             return;
-        }
 
         RotateBarrel();
     }
@@ -79,8 +96,10 @@ public class Cannon : Interactable
 
     private void RotateBarrel()
     {
-        float previousAngle = currentAngle;
+        if (waitingAtStop)
+            return;
 
+        float previousAngle = currentAngle;
 
         currentAngle += rotationSpeed * direction * Time.deltaTime;
         
@@ -97,10 +116,11 @@ public class Cannon : Interactable
 
         if (state == CannonState.Returning)
         {
-            bool crossedStopAngle =(previousAngle < stopAngle && currentAngle >= stopAngle) || (previousAngle > stopAngle && currentAngle <= stopAngle);
+            bool crossedStopAngle = (previousAngle < stopAngle && currentAngle >= stopAngle) || (previousAngle > stopAngle && currentAngle <= stopAngle);
+
             if (crossedStopAngle)
             {
-                StopCannon();
+                ReachStop();
                 return;
             }
         }
@@ -113,15 +133,19 @@ public class Cannon : Interactable
         barrelPivot.localRotation = baseRotation * Quaternion.Euler(0f, currentAngle, 0f);
     }
 
-    private void StopCannon()
+    private void ReachStop()
     {
-        state = CannonState.Idle;
-
         currentAngle = stopAngle;
         direction = 1f;
         chargeTime = 0f;
+        waitingAtStop = true;
 
         SetBarrelRotation();
+
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && mapActivity.Manager != null)
+        {
+            mapActivity.Manager.CompleteCannonReturnFromServer(mapActivity.MapIndex, networkId);
+        }
     }
 
     public override bool CanInteract(PlayerInteraction player)
@@ -129,13 +153,41 @@ public class Cannon : Interactable
         return state == CannonState.Idle;
     }
 
-
     public override void InteractStart(PlayerInteraction player)
+    {
+        if (mapActivity.Manager == null)
+            return;
+
+        mapActivity.Manager.RequestCannonStartServerRpc(mapActivity.MapIndex, networkId);
+    }
+
+    public override void InteractHold(PlayerInteraction player)
+    {
+        if (state != CannonState.Occupied)
+            return;
+
+        chargeTime += Time.deltaTime;
+        chargeTime = Mathf.Min(chargeTime, fullChargeTime);
+    }
+
+    public override void InteractEnd(PlayerInteraction player)
+    {
+        if (state != CannonState.Occupied)
+            return;
+
+        if (mapActivity.Manager == null)
+            return;
+
+        mapActivity.Manager.RequestCannonFireServerRpc(mapActivity.MapIndex, networkId);
+    }
+
+    public void ApplyNetworkStart(PlayerInteraction player)
     {
         state = CannonState.Occupied;
         chargeTime = 0f;
+        waitingAtStop = false;
 
-        PlayerMovement movement =player.GetComponent<PlayerMovement>();
+        PlayerMovement movement = player.GetComponent<PlayerMovement>();
 
         if (movement != null)
         {
@@ -143,41 +195,39 @@ public class Cannon : Interactable
         }
     }
 
-
-    public override void InteractHold(PlayerInteraction player)
+    public void ApplyNetworkFire(PlayerInteraction player, float launchSpeed)
     {
-        if (state != CannonState.Occupied)
-        {
-            return;
-        }
-
-        chargeTime += Time.deltaTime;
-        chargeTime = Mathf.Min(chargeTime, fullChargeTime);
-    }
-
-
-    public override void InteractEnd(PlayerInteraction player)
-    {
-        if (state != CannonState.Occupied)
-        {
-            return;
-        }
-
-        FirePlayer(player);
         state = CannonState.Returning;
-    }
+        waitingAtStop = false;
 
-
-    private void FirePlayer(PlayerInteraction player)
-    {
         PlayerMovement movement = player.GetComponent<PlayerMovement>();
 
-        if (movement == null)
+        if (movement != null)
         {
-            return;
+            movement.LaunchFromCannon(launchPoint.position, launchPoint.forward, launchSpeed);
         }
+    }
 
-        float launchSpeed = maxLaunchSpeed * ChargeRatio;
-        movement.LaunchFromCannon(launchPoint.position, launchPoint.forward, launchSpeed);
+    public void ApplyNetworkIdle()
+    {
+        state = CannonState.Idle;
+
+        currentAngle = stopAngle;
+        direction = 1f;
+        chargeTime = 0f;
+        waitingAtStop = false;
+
+        SetBarrelRotation();
+    }
+
+    public float GetLaunchSpeed(double chargeDuration)
+    {
+        if (fullChargeTime <= 0f)
+            return maxLaunchSpeed;
+
+        float ratio =
+            Mathf.Clamp01((float)chargeDuration / fullChargeTime);
+
+        return maxLaunchSpeed * ratio;
     }
 }

@@ -1,34 +1,32 @@
+using Unity.Netcode;
 using UnityEngine;
 
 public class GoalLine : MonoBehaviour
 {
-    private GameFlowManager gameFlowManager;
-    private bool finished;
-
-    private void Awake()
-    {
-        gameFlowManager = FindAnyObjectByType<GameFlowManager>();
-    }
+    private bool localPlayerFinished;
 
     private void OnTriggerEnter(Collider other)
     {
-        if (finished)
+        if (localPlayerFinished)
         {
             return;
         }
 
-        PlayerMovement player = other.GetComponentInParent<PlayerMovement>();
+        NetworkObject playerNetworkObject = other.GetComponentInParent<NetworkObject>();
 
-        if (player == null)
+        if (playerNetworkObject == null || !playerNetworkObject.IsOwner)
         {
             return;
         }
 
-        finished = true;
+        GameFlowManager gameFlowManager = FindAnyObjectByType<GameFlowManager>();
 
-        if (gameFlowManager != null)
+        if (gameFlowManager == null)
         {
-            gameFlowManager.FinishGame();
+            return;
         }
+
+        localPlayerFinished = true;
+        gameFlowManager.ReportFinish();
     }
 }

@@ -1,3 +1,4 @@
+using Unity.Netcode;
 using UnityEngine;
 
 public class MovementModeTrigger : MonoBehaviour
@@ -7,6 +8,11 @@ public class MovementModeTrigger : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        NetworkObject networkObject = other.GetComponentInParent<NetworkObject>();
+
+        if (networkObject == null || !networkObject.IsOwner)
+            return;
+
         PlayerMovement movement = other.GetComponentInParent<PlayerMovement>();
 
         if (movement == null)

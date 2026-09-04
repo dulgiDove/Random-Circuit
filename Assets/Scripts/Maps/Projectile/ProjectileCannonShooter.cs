@@ -1,3 +1,4 @@
+using Unity.Netcode;
 using UnityEngine;
 
 public class ProjectileCannonShooter : MonoBehaviour
@@ -19,43 +20,65 @@ public class ProjectileCannonShooter : MonoBehaviour
     [SerializeField]
     private float projectileSpeed = 12f;
 
-    private float fireTimer;
+    private double lastActivationTime = -1d;
+    private int lastFiredShotIndex = -1;
 
     private MapActivity mapActivity;
 
     private void Awake()
     {
-        mapActivity = GetComponentInParent<MapActivity>();
-    }
+        Debug.Assert(firePoint != null);
+        Debug.Assert(projectilePool != null);
 
-    private void Start()
-    {
-        fireTimer = initialDelay;
+        mapActivity = GetComponentInParent<MapActivity>();
+        Debug.Assert(mapActivity != null);
     }
 
     private void Update()
     {
-        if (mapActivity != null && !mapActivity.IsActive)
-        {
+        if (!mapActivity.IsActive)
             return;
+
+        double activationTime = mapActivity.ActivatedServerTime;
+
+        if (activationTime != lastActivationTime)
+        {
+            lastActivationTime = activationTime;
+            lastFiredShotIndex = -1;
         }
 
-        fireTimer -= Time.deltaTime;
+        double serverTime = NetworkManager.Singleton.ServerTime.Time;
 
-        if (fireTimer > 0f)
-        {
+        double elapsed = serverTime - activationTime;
+
+        if (elapsed < initialDelay)
             return;
-        }
 
-        Fire();
-        fireTimer = fireInterval;
+        float interval = Mathf.Max(fireInterval, 0.01f);
+
+        int currentShotIndex = Mathf.FloorToInt((float)((elapsed - initialDelay) / interval));
+
+        while (lastFiredShotIndex < currentShotIndex)
+        {
+            lastFiredShotIndex++;
+
+            double shotServerTime = activationTime + initialDelay+ lastFiredShotIndex * interval;
+            double age = serverTime - shotServerTime;
+
+            if (age < projectileLifetime)
+            {
+                Fire(shotServerTime);
+            }
+        }
     }
 
 
-    private void Fire()
+    private void Fire(double shotServerTime)
     {
         CannonProjectile projectile = projectilePool.GetProjectile();
+
         projectile.transform.SetPositionAndRotation(firePoint.position, firePoint.rotation);
-        projectile.Launch(firePoint.forward, projectileSpeed, projectileLifetime);
+
+        projectile.Launch( firePoint.position, firePoint.forward, projectileSpeed, projectileLifetime, shotServerTime);
     }
 }

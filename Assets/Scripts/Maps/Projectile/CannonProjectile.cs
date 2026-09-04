@@ -6,11 +6,13 @@ public class CannonProjectile : MonoBehaviour
 
     private Vector3 velocity;
 
-    private float lifeTimer;
-
     private bool returnedToPool = true;
 
     private ProjectilePool projectilePool;
+
+    private Vector3 spawnPosition;
+    private double spawnServerTime;
+    private float lifetime;
 
     internal int ActiveIndex { get; set; } = -1;
 
@@ -24,32 +26,52 @@ public class CannonProjectile : MonoBehaviour
         projectilePool = pool;
     }
 
-    public void Launch(Vector3 direction, float speed, float lifetime
-    )
+    public void Launch(Vector3 position, Vector3 direction, float speed, float lifetime, double serverTime)
     {
         returnedToPool = false;
+
+        spawnPosition = position;
         velocity = direction.normalized * speed;
-        lifeTimer = lifetime;
+
+        this.lifetime = lifetime;
+        spawnServerTime = serverTime;
+
+        transform.position = position;
     }
 
-    internal void Tick(float deltaTime)
+    internal void Tick(double currentServerTime)
     {
-        transform.position += velocity * deltaTime;
-        lifeTimer -= deltaTime;
+        double elapsed = currentServerTime - spawnServerTime;
 
-        if (lifeTimer <= 0f)
+        if (elapsed >= lifetime)
         {
             ReturnToPool();
+            return;
         }
+
+        float time = Mathf.Max(0f, (float)elapsed);
+
+        transform.position = spawnPosition + velocity * time;
     }
 
+    internal void PrepareForUse()
+    {
+        returnedToPool = false;
+    }
+
+    internal void PrepareForPool()
+    {
+        returnedToPool = true;
+        spawnPosition = Vector3.zero;
+        spawnServerTime = 0d;
+        lifetime = 0f;
+        velocity = Vector3.zero;
+    }
 
     private void OnTriggerEnter(Collider other)
     {
         if (returnedToPool)
-        {
             return;
-        }
 
         if (other.gameObject.layer == playerLayer)
         {
@@ -73,25 +95,9 @@ public class CannonProjectile : MonoBehaviour
     private void ReturnToPool()
     {
         if (returnedToPool)
-        {
             return;
-        }
 
         returnedToPool = true;
         projectilePool.ReleaseProjectile(this);
-    }
-
-
-    internal void PrepareForUse()
-    {
-        returnedToPool = false;
-    }
-
-
-    internal void PrepareForPool()
-    {
-        returnedToPool = true;
-        velocity = Vector3.zero;
-        lifeTimer = 0f;
     }
 }

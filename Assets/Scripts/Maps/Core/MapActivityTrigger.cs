@@ -1,3 +1,4 @@
+using Unity.Netcode;
 using UnityEngine;
 
 public class MapActivityTrigger : MonoBehaviour
@@ -15,29 +16,30 @@ public class MapActivityTrigger : MonoBehaviour
 
     private bool triggered;
 
+    private void Awake()
+    {
+        Debug.Assert(mapActivity != null);
+    }
+
     private void OnTriggerEnter(Collider other)
     {
         if (triggered)
-        {
             return;
-        }
 
-        PlayerMovement player = other.GetComponentInParent<PlayerMovement>();
+        NetworkObject playerNetworkObject = other.GetComponentInParent<NetworkObject>();
 
-        if (player == null)
-        {
+        if (playerNetworkObject == null || !playerNetworkObject.IsOwner)
             return;
-        }
 
         triggered = true;
 
         if (triggerType == TriggerType.Enter)
         {
-            mapActivity.EnterPlayer();
+            mapActivity.RequestEnter();
         }
         else
         {
-            mapActivity.ExitPlayer();
+            mapActivity.RequestExit();
         }
     }
 }

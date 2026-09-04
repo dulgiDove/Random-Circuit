@@ -18,9 +18,13 @@ public class PlayerInteraction : MonoBehaviour
     private Interactable currentTarget;
     private Interactable activeInteraction;
 
-    public Interactable ActiveInteraction
+    public Interactable ActiveInteraction => activeInteraction;
+
+    public Interactable DisplayTarget => activeInteraction != null ? activeInteraction : currentTarget;
+
+    private void Awake()
     {
-        get { return activeInteraction;}
+        Debug.Assert(interactAction != null);
     }
 
     private void OnEnable()
@@ -66,7 +70,7 @@ public class PlayerInteraction : MonoBehaviour
                 continue;
             }
 
-            float distance =(interactable.transform.position - transform.position).sqrMagnitude;
+            float distance = (interactable.transform.position - transform.position).sqrMagnitude;
 
             if (distance < closestDistance)
             {
@@ -84,8 +88,16 @@ public class PlayerInteraction : MonoBehaviour
         {
             if (currentTarget != null)
             {
-                activeInteraction = currentTarget;
-                activeInteraction.InteractStart(this);
+                if (currentTarget.RequiresServerApproval)
+                {
+                    // 서버에 사용 요청만 보냄.
+                    currentTarget.InteractStart(this);
+                }
+                else
+                {
+                    activeInteraction = currentTarget;
+                    activeInteraction.InteractStart(this);
+                }
             }
         }
 
@@ -107,16 +119,16 @@ public class PlayerInteraction : MonoBehaviour
         }
     }
 
-    public Interactable DisplayTarget
+    public void SetActiveInteraction(Interactable interaction)
     {
-        get
-        {
-            if (activeInteraction != null)
-            {
-                return activeInteraction;
-            }
+        activeInteraction = interaction;
+    }
 
-            return currentTarget;
+    public void ClearActiveInteraction(Interactable interaction)
+    {
+        if (activeInteraction == interaction)
+        {
+            activeInteraction = null;
         }
     }
 

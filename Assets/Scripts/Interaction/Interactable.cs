@@ -8,6 +8,7 @@ public abstract class Interactable : MonoBehaviour
     [SerializeField]
     private Vector3 interactionPointOffset = new Vector3(0f, 1f, 0f);
 
+    public virtual bool RequiresServerApproval => false;
     public string PromptText => promptText;
 
     public Vector3 InteractionPoint

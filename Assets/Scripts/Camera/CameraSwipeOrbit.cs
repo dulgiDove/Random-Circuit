@@ -14,6 +14,11 @@ public class CameraSwipeOrbit : MonoBehaviour, IDragHandler
     [SerializeField]
     private float verticalDegreesPerScreen = 120f;
 
+    private void Awake()
+    {
+        Debug.Assert(orbitalFollow != null);
+    }
+
     public void OnDrag(PointerEventData eventData)
     {
         Vector2 delta = eventData.delta;

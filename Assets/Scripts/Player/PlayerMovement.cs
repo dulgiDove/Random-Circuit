@@ -107,8 +107,8 @@ public class PlayerMovement : MonoBehaviour
 
     public PlayerMovementMode MovementMode => movementMode;
 
-    public float DashCooldownProgress => normalStrategy != null ? normalStrategy.DashCooldownProgress : 1f;
-    public float JumpKingChargeRatio => jumpKingStrategy != null? jumpKingStrategy.ChargeRatio : 0f;
+    public float DashCooldownProgress => normalStrategy.DashCooldownProgress;
+    public float JumpKingChargeRatio => jumpKingStrategy.ChargeRatio;
 
     public bool IsFanCaptureComplete => isInFan && fanCaptureComplete;
     public float FanVerticalVelocity => fanVelocity.y;
@@ -168,6 +168,12 @@ public class PlayerMovement : MonoBehaviour
 
     private void Awake()
     {
+        Debug.Assert(characterController != null);
+        Debug.Assert(visualRoot != null);
+        Debug.Assert(moveAction != null);
+        Debug.Assert(jumpAction != null);
+        Debug.Assert(dashAction != null);
+
         if (cameraTransform == null && Camera.main != null)
         {
             cameraTransform = Camera.main.transform;
@@ -238,7 +244,7 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        currentStrategy?.Exit();
+        currentStrategy.Exit();
 
         movementMode = newMode;
         currentStrategy = GetStrategy(movementMode);
@@ -264,8 +270,8 @@ public class PlayerMovement : MonoBehaviour
 
     private void CancelCurrentStrategyAction()
     {
-        currentStrategy?.CancelActiveAction();
-        normalStrategy?.CancelDash();
+        currentStrategy.CancelActiveAction();
+        normalStrategy.CancelDash();
     }
 
     internal void RotateVisual(Vector3 horizontalVelocity, float deltaTime)
@@ -276,11 +282,7 @@ public class PlayerMovement : MonoBehaviour
         }
 
         Quaternion targetRotation = Quaternion.LookRotation(horizontalVelocity.normalized, Vector3.up);
-        visualRoot.rotation = Quaternion.Slerp(
-            visualRoot.rotation,
-            targetRotation,
-            rotationSpeed * deltaTime
-        );
+        visualRoot.rotation = Quaternion.Slerp(visualRoot.rotation, targetRotation, rotationSpeed * deltaTime);
     }
 
     // =========================
@@ -362,7 +364,7 @@ public class PlayerMovement : MonoBehaviour
         {
             fanCaptureTimer += Time.deltaTime;
             float t = Mathf.Clamp01(fanCaptureTimer / fanCaptureDuration);
-            fanVelocity = Vector3.Lerp(fanEntryVelocity, Vector3.zero,t);
+            fanVelocity = Vector3.Lerp(fanEntryVelocity, Vector3.zero, t);
 
             if (t >= 1f)
             {
@@ -512,7 +514,7 @@ public class PlayerMovement : MonoBehaviour
         visualRoot.gameObject.SetActive(true);
 
         knockbackVelocity = objectVelocity * forceMultiplier;
-        knockbackVelocity.y = Mathf.Max(knockbackVelocity.y,upwardSpeed);
+        knockbackVelocity.y = Mathf.Max(knockbackVelocity.y, upwardSpeed);
 
         isKnockedBack = true;
     }
@@ -553,9 +555,19 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        characterController.enabled = false;
+        bool wasEnabled = characterController.enabled;
+
+        if (wasEnabled)
+        {
+            characterController.enabled = false;
+        }
+
         transform.position = position;
-        characterController.enabled = true;
+
+        if (wasEnabled)
+        {
+            characterController.enabled = true;
+        }
 
         visualRoot.gameObject.SetActive(true);
 
@@ -568,5 +580,10 @@ public class PlayerMovement : MonoBehaviour
     public void SetControlsLocked(bool locked)
     {
         controlsLocked = locked;
+    }
+
+    public void SetCameraTransform(Transform newCameraTransform)
+    {
+        cameraTransform = newCameraTransform;
     }
 }

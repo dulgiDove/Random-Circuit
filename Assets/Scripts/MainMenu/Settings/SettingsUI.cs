@@ -11,33 +11,31 @@ public class SettingsUI : MonoBehaviour
     [SerializeField]
     private Slider sfxSlider;
 
-    private void Start()
+    private void Awake()
     {
-        settingsPanel.SetActive(false);
-        bgmSlider.value = GameSettings.BgmVolume;
-        sfxSlider.value =  GameSettings.SfxVolume;
+        Debug.Assert(settingsPanel != null);
+        Debug.Assert(bgmSlider != null);
+        Debug.Assert(sfxSlider != null);
+    }
 
+    private void OnEnable()
+    {
         bgmSlider.onValueChanged.AddListener(OnBgmVolumeChanged);
         sfxSlider.onValueChanged.AddListener(OnSfxVolumeChanged);
     }
 
-    private void OnDestroy()
+    private void OnDisable()
     {
         bgmSlider.onValueChanged.RemoveListener(OnBgmVolumeChanged);
         sfxSlider.onValueChanged.RemoveListener(OnSfxVolumeChanged);
     }
 
-    public void OpenSettings()
+    private void Start()
     {
+        settingsPanel.SetActive(false);
+
         bgmSlider.value = GameSettings.BgmVolume;
         sfxSlider.value = GameSettings.SfxVolume;
-        settingsPanel.SetActive(true);
-    }
-
-    public void CloseSettings()
-    {
-        GameSettings.Save();
-        settingsPanel.SetActive(false);
     }
 
     private void OnBgmVolumeChanged(float value)
@@ -54,5 +52,18 @@ public class SettingsUI : MonoBehaviour
         {
             AudioManager.Instance.SetSfxVolume(value);
         }
+    }
+
+    public void OpenSettings()
+    {
+        bgmSlider.value = GameSettings.BgmVolume;
+        sfxSlider.value = GameSettings.SfxVolume;
+        settingsPanel.SetActive(true);
+    }
+
+    public void CloseSettings()
+    {
+        GameSettings.Save();
+        settingsPanel.SetActive(false);
     }
 }

@@ -1,3 +1,4 @@
+using Unity.Netcode;
 using UnityEngine;
 
 public class OneWayBlockerTrigger : MonoBehaviour
@@ -10,15 +11,24 @@ public class OneWayBlockerTrigger : MonoBehaviour
 
     private void Awake()
     {
-        if (returnBlocker != null)
-        {
-            returnBlocker.enabled = false;
-        }
+        Debug.Assert(returnBlocker != null);
+    }
+
+    private void Start()
+    {
+        returnBlocker.enabled = false;
     }
 
     private void OnTriggerEnter(Collider other)
     {
         if (activated)
+        {
+            return;
+        }
+
+        NetworkObject networkObject = other.GetComponentInParent<NetworkObject>();
+
+        if (networkObject == null || !networkObject.IsOwner)
         {
             return;
         }
@@ -31,10 +41,6 @@ public class OneWayBlockerTrigger : MonoBehaviour
         }
 
         activated = true;
-
-        if (returnBlocker != null)
-        {
-            returnBlocker.enabled = true;
-        }
+        returnBlocker.enabled = true;
     }
 }

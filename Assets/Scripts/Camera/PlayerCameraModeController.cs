@@ -14,31 +14,18 @@ public class PlayerCameraModeController : MonoBehaviour
 
     private void Awake()
     {
-        if (thirdPersonCamera != null)
-        {
-            thirdPersonCinemachineCamera = thirdPersonCamera.GetComponent<CinemachineCamera>();
-        }
+        Debug.Assert(thirdPersonCamera != null);
+        Debug.Assert(sideViewCamera != null);
 
-        if (sideViewCamera != null)
-        {
-            sideViewCinemachineCamera = sideViewCamera.GetComponent<CinemachineCamera>();
-        }
+        thirdPersonCinemachineCamera = thirdPersonCamera.GetComponent<CinemachineCamera>();
+        sideViewCinemachineCamera = sideViewCamera.GetComponent<CinemachineCamera>();
     }
-
 
     public void SetSideView(bool enabled)
     {
-        if (thirdPersonCamera != null)
-        {
-            thirdPersonCamera.SetActive(!enabled);
-        }
-
-        if (sideViewCamera != null)
-        {
-            sideViewCamera.SetActive(enabled);
-        }
+        thirdPersonCamera.SetActive(!enabled);
+        sideViewCamera.SetActive(enabled);
     }
-
 
     public void SetFarClip(float distance)
     {
@@ -46,14 +33,8 @@ public class PlayerCameraModeController : MonoBehaviour
         SetCameraFarClip(sideViewCinemachineCamera, distance);
     }
 
-
     private void SetCameraFarClip(CinemachineCamera camera,float distance)
     {
-        if (camera == null)
-        {
-            return;
-        }
-
         var lens = camera.Lens;
         lens.FarClipPlane = distance;
         camera.Lens = lens;

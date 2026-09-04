@@ -6,23 +6,17 @@ public class AudioManager : MonoBehaviour
 {
     public static AudioManager Instance { get; private set; }
 
-    [Header("Audio Sources")]
+    [Header("Refences")]
     [SerializeField]
     private AudioMixer audioMixer;
     [SerializeField]
     private AudioSource bgmSource;
     [SerializeField]
     private AudioSource sfxSource;
-
-    [Header("BGM")]
     [SerializeField]
     private AudioClip mainMenuBgm;
     [SerializeField]
     private AudioClip gameplayBgm;
-
-    [Header("Test SFX")]
-    [SerializeField]
-    private AudioClip testSfx;
 
     private void Awake()
     {
@@ -34,6 +28,13 @@ public class AudioManager : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
+
+        Debug.Assert(audioMixer != null);
+        Debug.Assert(bgmSource != null);
+        Debug.Assert(sfxSource != null);
+        Debug.Assert(mainMenuBgm != null);
+        Debug.Assert(gameplayBgm != null);
+
         ApplyVolumes();
     }
 
@@ -71,14 +72,10 @@ public class AudioManager : MonoBehaviour
         }
 
         if (targetClip == null)
-        {
             return;
-        }
 
         if (bgmSource.clip == targetClip && bgmSource.isPlaying)
-        {
             return;
-        }
 
         bgmSource.clip = targetClip;
         bgmSource.loop = true;
@@ -93,7 +90,7 @@ public class AudioManager : MonoBehaviour
 
     public void PlaySfx(AudioClip clip)
     {
-        if (clip == null || sfxSource == null)
+        if (clip == null)
         {
             return;
         }

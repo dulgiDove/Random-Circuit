@@ -1,3 +1,4 @@
+using Unity.Netcode;
 using UnityEngine;
 
 public class Fan : MonoBehaviour
@@ -23,19 +24,25 @@ public class Fan : MonoBehaviour
     private PlayerMovement currentPlayer;
     private Collider currentPlayerCollider;
 
+    private void Awake()
+    {
+        Debug.Assert(targetHeight != null);
+    }
+
     private void OnTriggerEnter(Collider other)
     {
         if (currentPlayer != null)
-        {
             return;
-        }
+
+        NetworkObject networkObject = other.GetComponentInParent<NetworkObject>();
+
+        if (networkObject == null || !networkObject.IsOwner)
+            return;
 
         PlayerMovement movement = other.GetComponentInParent<PlayerMovement>();
 
         if (movement == null)
-        {
             return;
-        }
 
         currentPlayer = movement;
         currentPlayerCollider = other;
@@ -46,14 +53,10 @@ public class Fan : MonoBehaviour
     private void OnTriggerStay(Collider other)
     {
         if (currentPlayer == null || other != currentPlayerCollider)
-        {
             return;
-        }
 
         if (!currentPlayer.IsFanCaptureComplete)
-        {
             return;
-        }
 
         float targetY = targetHeight.position.y;
         float currentY = currentPlayer.transform.position.y;
@@ -89,9 +92,7 @@ public class Fan : MonoBehaviour
     private void OnTriggerExit(Collider other)
     {
         if (currentPlayer == null || other != currentPlayerCollider)
-        {
             return;
-        }
 
         currentPlayer.ExitFan();
         currentPlayer = null;

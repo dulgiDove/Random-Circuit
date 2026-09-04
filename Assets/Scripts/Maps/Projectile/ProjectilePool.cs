@@ -1,3 +1,4 @@
+using Unity.Netcode;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Pool;
@@ -21,17 +22,19 @@ public class ProjectilePool : MonoBehaviour
 
     private void Awake()
     {
+        Debug.Assert(projectilePrefab != null);
+
         activeProjectiles = new List<CannonProjectile>(prewarmCount);
 
         pool = new ObjectPool<CannonProjectile>(
-                CreateProjectile,
-                OnGetProjectile,
-                OnReleaseProjectile,
-                OnDestroyProjectile,
-                true,
-                defaultCapacity,
-                maxSize
-            );
+            CreateProjectile,
+            OnGetProjectile,
+            OnReleaseProjectile,
+            OnDestroyProjectile,
+            true,
+            defaultCapacity,
+            maxSize
+        );
 
         Prewarm();
     }
@@ -39,13 +42,18 @@ public class ProjectilePool : MonoBehaviour
 
     private void Update()
     {
-        float deltaTime = Time.deltaTime;
+        if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
+            return;
+
+        double serverTime = NetworkManager.Singleton.ServerTime.Time;
+
         int index = 0;
 
         while (index < activeProjectiles.Count)
         {
             CannonProjectile projectile = activeProjectiles[index];
-            projectile.Tick(deltaTime);
+
+            projectile.Tick(serverTime);
 
             if (index < activeProjectiles.Count && activeProjectiles[index] == projectile)
             {
@@ -62,6 +70,39 @@ public class ProjectilePool : MonoBehaviour
         return projectile;
     }
 
+    internal void ReleaseProjectile(CannonProjectile projectile)
+    {
+        pool.Release(projectile);
+    }
+
+    public void ReleaseAllProjectiles()
+    {
+        while (activeProjectiles.Count > 0)
+        {
+            pool.Release(activeProjectiles[activeProjectiles.Count - 1]);
+        }
+    }
+
+    private void Prewarm()
+    {
+        int count = Mathf.Min(prewarmCount, maxSize);
+        CannonProjectile[] projectiles = new CannonProjectile[count];
+
+        for (int i = 0; i < count; i++)
+        {
+            projectiles[i] = pool.Get();
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            pool.Release(projectiles[i]);
+        }
+    }
+
+    public CannonProjectile GetProjectile()
+    {
+        return pool.Get();
+    }
 
     private void OnGetProjectile(CannonProjectile projectile)
     {
@@ -98,9 +139,7 @@ public class ProjectilePool : MonoBehaviour
         int index = projectile.ActiveIndex;
 
         if (index < 0 || index >= activeProjectiles.Count)
-        {
             return;
-        }
 
         int lastIndex = activeProjectiles.Count - 1;
 
@@ -113,39 +152,5 @@ public class ProjectilePool : MonoBehaviour
 
         activeProjectiles.RemoveAt(lastIndex);
         projectile.ActiveIndex = -1;
-    }
-
-    public CannonProjectile GetProjectile()
-    {
-        return pool.Get();
-    }
-
-    internal void ReleaseProjectile(CannonProjectile projectile)
-    {
-        pool.Release(projectile);
-    }
-
-    public void ReleaseAllProjectiles()
-    {
-        while (activeProjectiles.Count > 0)
-        {
-            pool.Release(activeProjectiles[activeProjectiles.Count - 1]);
-        }
-    }
-
-    private void Prewarm()
-    {
-        int count = Mathf.Min(prewarmCount, maxSize);
-        CannonProjectile[] projectiles = new CannonProjectile[count];
-
-        for (int i = 0; i < count; i++)
-        {
-            projectiles[i] = pool.Get();
-        }
-
-        for (int i = 0; i < count; i++)
-        {
-            pool.Release(projectiles[i]);
-        }
     }
 }

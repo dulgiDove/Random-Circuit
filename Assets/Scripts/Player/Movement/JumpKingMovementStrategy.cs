@@ -76,20 +76,11 @@ public class JumpKingMovementStrategy : IPlayerMovementStrategy
             {
                 float charge = ChargeRatio;
                 float horizontalSpeed = owner.JumpKingHorizontalSpeed;
-                float verticalSpeed = Mathf.Lerp(
-                    owner.JumpKingMinVerticalSpeed,
-                    owner.JumpKingMaxVerticalSpeed,
-                    charge
-                );
+                float verticalSpeed = Mathf.Lerp(owner.JumpKingMinVerticalSpeed, owner.JumpKingMaxVerticalSpeed, charge);
 
                 Vector3 facingDirection = Vector3.ProjectOnPlane(owner.VisualRoot.forward, Vector3.up).normalized;
 
-                float direction =  Mathf.Sign(
-                        Vector3.Dot(
-                            facingDirection,
-                            horizontalAxis
-                        )
-                    );
+                float direction = Mathf.Sign(Vector3.Dot(facingDirection, horizontalAxis));
 
                 jumpHorizontalVelocity = horizontalSpeed * direction;
                 owner.VerticalVelocity = verticalSpeed;
@@ -145,9 +136,7 @@ public class JumpKingMovementStrategy : IPlayerMovementStrategy
 
     public void CancelActiveAction()
     {
-        isCharging = false;
-        chargeTime = 0f;
-        jumpHorizontalVelocity = 0f;
+        Reset();
     }
 
     public void Reset()

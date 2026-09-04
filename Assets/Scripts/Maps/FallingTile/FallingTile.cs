@@ -1,3 +1,4 @@
+using Unity.Netcode;
 using System.Collections;
 using UnityEngine;
 
@@ -36,77 +37,145 @@ public class FallingTile : MonoBehaviour
     [SerializeField]
     private float respawnRevealDelay = 0.2f;
 
+    [Header("Network")]
+    [SerializeField]
+    private int networkId;
+
+    private MapActivity mapActivity;
+    private Coroutine collapseCoroutine;
+
+    public int NetworkId => networkId;
+
+    public float TotalCycleDuration => collapseDelay + sinkDuration + respawnDelay + 0.15f + respawnRevealDelay;
+
     private Vector3 startPosition;
     private bool isActivated;
 
     private void Awake()
     {
+        Debug.Assert(tileModel != null);
+        Debug.Assert(solidCollider != null);
+        Debug.Assert(disappearVfxPrefab != null);
+        Debug.Assert(respawnVfxPrefab != null);
+
+        mapActivity = GetComponentInParent<MapActivity>();
+        Debug.Assert(mapActivity != null);
+
         startPosition = transform.position;
     }
 
     private void OnTriggerEnter(Collider other)
     {
-
-        PlayerMovement player = other.GetComponentInParent<PlayerMovement>();
-
-        if (player == null)
-        {
-            return;
-        }
-
         if (isActivated)
-        {
             return;
-        }
+
+        NetworkObject networkObject = other.GetComponentInParent<NetworkObject>();
+
+        if (networkObject == null || !networkObject.IsOwner)
+            return;
+
+        if (mapActivity.Manager == null)
+            return;
+
+        mapActivity.Manager.RequestFallingTileServerRpc(mapActivity.MapIndex, networkId);
+    }
+
+    public void ApplyNetworkFall(double startServerTime)
+    {
+        if (isActivated)
+            return;
 
         isActivated = true;
-        StartCoroutine(CollapseRoutine());
+
+        if (collapseCoroutine != null)
+        {
+            StopCoroutine(collapseCoroutine);
+        }
+
+        collapseCoroutine = StartCoroutine(CollapseRoutine(startServerTime));
     }
 
 
-    private IEnumerator CollapseRoutine()
+    private IEnumerator CollapseRoutine(double startServerTime)
     {
-        yield return new WaitForSeconds(collapseDelay);
+        double collapseStartTime = startServerTime + collapseDelay;
 
-        Vector3 sinkStart = transform.position;
-        Vector3 sinkEnd = startPosition + Vector3.down * sinkDistance;
-        float timer = 0f;
-
-        while (timer < sinkDuration)
+        while (NetworkManager.Singleton.ServerTime.Time < collapseStartTime)
         {
-            timer += Time.deltaTime;
-            float t = Mathf.Clamp01(timer / sinkDuration);
-            transform.position = Vector3.Lerp(sinkStart, sinkEnd, t);
+            yield return null;
+        }
+
+        Vector3 sinkEnd = startPosition + Vector3.down * sinkDistance;
+        double sinkEndTime = collapseStartTime + sinkDuration;
+
+        while (NetworkManager.Singleton.ServerTime.Time < sinkEndTime)
+        {
+            double currentTime = NetworkManager.Singleton.ServerTime.Time;
+
+            float t = sinkDuration <= 0f ? 1f : Mathf.Clamp01((float)((currentTime - collapseStartTime) / sinkDuration));
+
+            transform.position = Vector3.Lerp(startPosition, sinkEnd, t);
 
             yield return null;
         }
 
         transform.position = sinkEnd;
-        yield return new WaitForSeconds(respawnDelay);
+
+        double disappearTime = sinkEndTime + respawnDelay;
+
+        while (NetworkManager.Singleton.ServerTime.Time < disappearTime)
+        {
+            yield return null;
+        }
 
         PlayVfx(disappearVfxPrefab, transform.position);
 
         tileModel.SetActive(false);
         solidCollider.enabled = false;
-        yield return new WaitForSeconds(0.15f);
+
+        double restoreTime = disappearTime + 0.15d;
+
+        while (NetworkManager.Singleton.ServerTime.Time < restoreTime)
+        {
+            yield return null;
+        }
 
         transform.position = startPosition;
+
         PlayVfx(respawnVfxPrefab, startPosition + respawnVfxOffset);
-        yield return new WaitForSeconds(respawnRevealDelay);
+
+        double revealTime = restoreTime + respawnRevealDelay;
+
+        while (NetworkManager.Singleton.ServerTime.Time < revealTime)
+        {
+            yield return null;
+        }
 
         tileModel.SetActive(true);
         solidCollider.enabled = true;
+
+        collapseCoroutine = null;
+    }
+
+    public void ApplyNetworkReset()
+    {
+        if (collapseCoroutine != null)
+        {
+            StopCoroutine(collapseCoroutine);
+            collapseCoroutine = null;
+        }
+
+        transform.position = startPosition;
+
+        tileModel.SetActive(true);
+        solidCollider.enabled = true;
+
         isActivated = false;
     }
 
 
     private void PlayVfx(GameObject prefab, Vector3 position)
     {
-        if (prefab == null)
-        {
-            return;
-        }
-
         GameObject instance = Instantiate(prefab, position, Quaternion.identity);
         Destroy(instance, vfxLifetime);
     }

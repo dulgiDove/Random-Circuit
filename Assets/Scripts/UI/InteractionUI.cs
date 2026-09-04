@@ -24,32 +24,54 @@ public class InteractionUI : MonoBehaviour
     private bool previousCanInteract;
     private Interactable previousTarget;
 
-    private void Start()
+    private void Awake()
     {
-        UpdateInteractButton(true);
+        Debug.Assert(mainCamera != null);
+        Debug.Assert(interactButtonCanvasGroup != null);
+        Debug.Assert(interactionPrompt != null);
+        Debug.Assert(promptText != null);
     }
 
     private void Update()
     {
+        if (playerInteraction == null)
+            return;
+
         UpdateInteractButton();
     }
 
     // 프롬프트는 카메라가 먼저 업데이트 된 후에 프롬프트가 반영되어야 하므로 LateUpdate 사용.
     private void LateUpdate()
     {
+        if (playerInteraction == null)
+            return;
+
         UpdatePrompt();
     }
 
-    private void UpdateInteractButton(bool forceUpdate = false)
+    public void Bind(PlayerInteraction interaction)
+    {
+        playerInteraction = interaction;
+        previousTarget = null;
+        previousCanInteract = false;
+
+        SetInteractableState(false);
+        interactionPrompt.gameObject.SetActive(false);
+    }
+
+    private void UpdateInteractButton()
     {
         bool canInteract = playerInteraction.DisplayTarget != null;
 
-        if (!forceUpdate && canInteract == previousCanInteract)
-        {
+        if (canInteract == previousCanInteract)
             return;
-        }
 
+        SetInteractableState(canInteract);
         previousCanInteract = canInteract;
+    }
+
+    private void SetInteractableState(bool canInteract)
+    {
         interactButtonCanvasGroup.alpha = canInteract ? 1f : inactiveButtonAlpha;
         interactButtonCanvasGroup.interactable = canInteract;
         interactButtonCanvasGroup.blocksRaycasts = canInteract;
@@ -79,8 +101,7 @@ public class InteractionUI : MonoBehaviour
             {
                 interactionPrompt.gameObject.SetActive(false);
             }
-
-            previousTarget = target;
+            
             return;
         }
 

@@ -1,3 +1,4 @@
+using Unity.Netcode;
 using UnityEngine;
 
 public class PlayerRespawn : MonoBehaviour
@@ -13,6 +14,19 @@ public class PlayerRespawn : MonoBehaviour
     private Vector3 respawnPosition;
     private Quaternion respawnRotation;
 
+    private NetworkObject networkObject;
+
+    private void Awake()
+    {
+        Debug.Assert(characterController != null);
+        Debug.Assert(playerMovement != null);
+        Debug.Assert(visualRoot != null);
+
+        networkObject = GetComponent<NetworkObject>();
+
+        Debug.Assert(networkObject != null);
+    }
+
     private void Start()
     {
         respawnPosition = transform.position;
@@ -21,17 +35,26 @@ public class PlayerRespawn : MonoBehaviour
 
     public void SetCheckpoint(Vector3 position, Quaternion rotation)
     {
+        if (!networkObject.IsOwner)
+            return;
+
         respawnPosition = position;
         respawnRotation = rotation;
     }
 
     public void Respawn()
     {
+        if (!networkObject.IsOwner)
+            return;
+
         GameRecords.RecordRespawn();
+
         playerMovement.ResetForRespawn();
+
         characterController.enabled = false;
         transform.position = respawnPosition;
         characterController.enabled = true;
+
         visualRoot.rotation = respawnRotation;
     }
 }

@@ -32,27 +32,12 @@ public class NormalMovementStrategy : IPlayerMovementStrategy
 
     public void Enter()
     {
-        coyoteTimer = 0f;
-        jumpBufferTimer = 0f;
-        CancelDash();
+        CancelActiveAction();
     }
 
     public void Exit()
     {
-        coyoteTimer = 0f;
-        jumpBufferTimer = 0f;
-        CancelDash();
-    }
-
-    public void TickCooldown(float deltaTime)
-    {
-        if (dashCooldownTimer <= 0f)
-        {
-            return;
-        }
-
-        dashCooldownTimer -= deltaTime;
-        dashCooldownTimer = Mathf.Max(dashCooldownTimer, 0f);
+        CancelActiveAction();
     }
 
     public void Tick(float deltaTime)
@@ -151,6 +136,35 @@ public class NormalMovementStrategy : IPlayerMovementStrategy
         owner.Controller.Move(velocity * deltaTime);
     }
 
+    public void TickCooldown(float deltaTime)
+    {
+        if (dashCooldownTimer <= 0f)
+        {
+            return;
+        }
+
+        dashCooldownTimer -= deltaTime;
+        dashCooldownTimer = Mathf.Max(dashCooldownTimer, 0f);
+    }
+
+    public void CancelActiveAction()
+    {
+        CancelDash();
+        coyoteTimer = 0f;
+        jumpBufferTimer = 0f;
+    }
+
+    public void Reset()
+    {
+        coyoteTimer = 0f;
+        jumpBufferTimer = 0f;
+
+        isDashing = false;
+        dashTimer = 0f;
+        dashCooldownTimer = 0f;
+        dashDirection = Vector3.zero;
+    }
+
     private void StartDash(Vector3 moveDirection)
     {
         isDashing = true;
@@ -176,24 +190,6 @@ public class NormalMovementStrategy : IPlayerMovementStrategy
     {
         isDashing = false;
         dashTimer = 0f;
-        dashDirection = Vector3.zero;
-    }
-
-    public void CancelActiveAction()
-    {
-        CancelDash();
-        coyoteTimer = 0f;
-        jumpBufferTimer = 0f;
-    }
-
-    public void Reset()
-    {
-        coyoteTimer = 0f;
-        jumpBufferTimer = 0f;
-
-        isDashing = false;
-        dashTimer = 0f;
-        dashCooldownTimer = 0f;
         dashDirection = Vector3.zero;
     }
 }

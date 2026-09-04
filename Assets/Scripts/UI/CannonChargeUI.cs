@@ -14,6 +14,13 @@ public class CannonChargeUI : MonoBehaviour
     [SerializeField]
     private TMP_Text powerText;
 
+    private void Awake()
+    {
+        Debug.Assert(chargeGauge != null);
+        Debug.Assert(fillRect != null);
+        Debug.Assert(powerText != null);
+    }
+
     private void Start()
     {
         chargeGauge.SetActive(false);
@@ -21,7 +28,15 @@ public class CannonChargeUI : MonoBehaviour
 
     private void Update()
     {
+        if (playerInteraction == null)
+            return;
+
         UpdateChargeGauge();
+    }
+
+    public void Bind(PlayerInteraction interaction)
+    {
+        playerInteraction = interaction;
     }
 
     private void UpdateChargeGauge()

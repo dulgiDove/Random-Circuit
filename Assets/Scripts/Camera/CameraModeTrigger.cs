@@ -1,37 +1,23 @@
+using Unity.Netcode;
 using UnityEngine;
 
 public class CameraModeTrigger : MonoBehaviour
 {
     [SerializeField]
-    private bool useSideView = true;
-
-    private PlayerCameraModeController cameraController;
-
-    private void Awake()
-    {
-        cameraController = FindAnyObjectByType<PlayerCameraModeController>();
-
-        if (cameraController == null)
-        {
-            return;
-        }
-    }
-
+    private bool useSideView;
 
     private void OnTriggerEnter(Collider other)
     {
-        PlayerMovement player = other.GetComponentInParent<PlayerMovement>();
+        NetworkObject networkObject = other.GetComponentInParent<NetworkObject>();
 
-        if (player == null)
-        {
+        if (networkObject == null || !networkObject.IsOwner)
             return;
-        }
 
-        if (cameraController == null)
-        {
+        PlayerCameraModeController controller = FindAnyObjectByType<PlayerCameraModeController>();
+
+        if (controller == null)
             return;
-        }
 
-        cameraController.SetSideView(useSideView);
+        controller.SetSideView(useSideView);
     }
 }

@@ -12,27 +12,22 @@ public class FanActivityController : MonoBehaviour
 
     private void Awake()
     {
+        Debug.Assert(modelRotator != null);
+        Debug.Assert(tornadoVfx != null);
+
         mapActivity = GetComponentInParent<MapActivity>();
+        Debug.Assert(mapActivity != null);
     }
 
     private void OnEnable()
     {
-        if (mapActivity == null)
-        {
-            SetActiveState(true);
-            return;
-        }
-
         mapActivity.ActivityChanged += OnActivityChanged;
         SetActiveState(mapActivity.IsActive);
     }
 
     private void OnDisable()
     {
-        if (mapActivity != null)
-        {
-            mapActivity.ActivityChanged -= OnActivityChanged;
-        }
+        mapActivity.ActivityChanged -= OnActivityChanged;
     }
 
     private void OnActivityChanged(bool active)
@@ -42,14 +37,7 @@ public class FanActivityController : MonoBehaviour
 
     private void SetActiveState(bool active)
     {
-        if (modelRotator != null)
-        {
-            modelRotator.enabled = active;
-        }
-
-        if (tornadoVfx != null)
-        {
-            tornadoVfx.SetActive(active);
-        }
+        modelRotator.enabled = active;
+        tornadoVfx.SetActive(active);
     }
 }
