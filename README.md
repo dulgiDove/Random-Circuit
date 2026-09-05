@@ -421,7 +421,7 @@ Goal / Ranking
 Clear
     ↓
 Retry / Exit
-``markdown
+```
 
 <img width="1383" height="771" alt="image" src="https://github.com/user-attachments/assets/fba784b5-eed0-4a3a-8a46-c3062b8dbbe7" />
 
